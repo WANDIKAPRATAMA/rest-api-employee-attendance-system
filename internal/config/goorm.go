@@ -69,9 +69,8 @@ func NewDatabase(viper *viper.Viper, log *logrus.Logger) *gorm.DB {
 			"banned",
 		},
 		"app_role": {
-			"super_admin",
-			"admin",
-			"user",
+			string(domain.Admin),
+			string(domain.Employee),
 		},
 
 		"attendance_type": {

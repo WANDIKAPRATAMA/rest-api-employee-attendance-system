@@ -14,7 +14,7 @@ type RouteConfig struct {
 }
 
 func (r *RouteConfig) Setup() {
-	api := r.App.Group("/api")
+	api := r.App.Group("/api/v1")
 
 	auth := api.Group("/auth")
 	auth.Post("/signup", r.AuthController.Signup)
@@ -23,4 +23,5 @@ func (r *RouteConfig) Setup() {
 	auth.Post("/refresh-token", r.AuthController.RefreshToken)
 	auth.Post("/change-role", r.AuthMiddleware.Authenticate, r.AuthController.ChangeRole)
 	auth.Post("/signout", r.AuthMiddleware.Authenticate, r.AuthController.Signout)
+
 }

@@ -7,10 +7,17 @@ import (
 	"gorm.io/gorm"
 )
 
+type Role string
+
+const (
+	Employee Role = "employee"
+	Admin    Role = "admin"
+)
+
 type ApplicationRole struct {
 	ID           uuid.UUID      `gorm:"type:uuid;primaryKey;default:uuid_generate_v4()"`
 	SourceUserID uuid.UUID      `gorm:"column:source_user_id;type:uuid;not null"`
-	Role         string         `gorm:"type:app_role;not null;default:'user'"`
+	Role         Role           `gorm:"type:app_role;not null"`
 	CreatedAt    time.Time      `gorm:"default:current_timestamp"`
 	UpdatedAt    time.Time      `gorm:"default:current_timestamp"`
 	DeletedAt    gorm.DeletedAt `gorm:"index"`

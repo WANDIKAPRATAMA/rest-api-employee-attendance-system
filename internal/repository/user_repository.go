@@ -18,10 +18,12 @@ type UserRepository interface {
 	FindRefreshToken(token string, deviceID string) (*domain.RefreshToken, error)
 	RevokeRefreshToken(tokenHash string) error
 	UpdateUserSecurity(userID uuid.UUID, newPassword string) error
-	AssignRole(userID uuid.UUID, role string) error
-	FindUserRoleByUserID(userID uuid.UUID) (string, error)
+	AssignRole(userID uuid.UUID, role domain.Role) error
+	FindUserRoleByUserID(userID uuid.UUID) (domain.Role, error)
 	FindUserByID(user_id uuid.UUID) (*domain.User, error)
 	UpdateRefreshToken(token *domain.RefreshToken) error
+	UpdateUserProfile(profile *domain.UserProfile) error
+	FindUserProfileByUserID(userID uuid.UUID) (*domain.UserProfile, error)
 }
 
 type userRepository struct {
@@ -33,11 +35,11 @@ func NewUserRepository(db *gorm.DB, log *logrus.Logger) UserRepository {
 	return &userRepository{db: db, log: log}
 }
 
-func (r *userRepository) FindUserRoleByUserID(userID uuid.UUID) (string, error) {
+func (r *userRepository) FindUserRoleByUserID(userID uuid.UUID) (domain.Role, error) {
 	var role domain.ApplicationRole
 	if err := r.db.Where("source_user_id = ?", userID).First(&role).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
-			return "user", nil
+			return domain.Employee, nil
 		}
 		return "", err
 	}
@@ -121,9 +123,24 @@ func (r *userRepository) UpdateUserSecurity(userID uuid.UUID, newPassword string
 	return r.db.Model(&domain.UserSecurity{}).Where("source_user_id = ?", userID).Update("password", newPassword).Error
 }
 
-func (r *userRepository) AssignRole(userID uuid.UUID, role string) error {
+func (r *userRepository) AssignRole(userID uuid.UUID, role domain.Role) error {
 	return r.db.Create(&domain.ApplicationRole{SourceUserID: userID, Role: role}).Error
 }
 func (r *userRepository) UpdateRefreshToken(token *domain.RefreshToken) error {
 	return r.db.Save(token).Error
+}
+
+func (r *userRepository) UpdateUserProfile(profile *domain.UserProfile) error {
+	return r.db.Save(profile).Error
+}
+func (r *userRepository) FindUserProfileByUserID(userID uuid.UUID) (*domain.UserProfile, error) {
+	var profile domain.UserProfile
+	err := r.db.Preload("Department").Where("source_user_id = ?", userID).First(&profile).Error
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return &profile, nil
 }

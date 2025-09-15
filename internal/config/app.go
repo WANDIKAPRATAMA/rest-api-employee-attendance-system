@@ -39,8 +39,14 @@ func NewAppConfig(config *AppConfig) {
 		AuthMiddleware: authMiddleware,
 	}
 
-	authRoutesConfig.Setup()
+	profileRoutesConfig := route.ProfileRouteConfig{
+		App:            config.App,
+		AuthController: authController,
+		AuthMiddleware: authMiddleware,
+	}
 
+	authRoutesConfig.Setup()
+	profileRoutesConfig.Setup()
 	config.Log.Info("Server starting on :8080")
 	if err := config.App.Listen(":8080"); err != nil {
 		log.Fatalf("Failed to start server: %v", err)

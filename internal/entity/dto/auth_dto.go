@@ -21,5 +21,12 @@ type RefreshTokenRequest struct {
 }
 
 type ChangeRoleRequest struct {
-	Role string `json:"role" validate:"required,oneof=super_admin admin user"`
+	Role string `json:"role" validate:"required,oneof=employee admin "`
+}
+
+type UpdateProfileRequest struct {
+	FullName  string `json:"full_name" validate:"omitempty,min=2,max=255"`
+	Phone     string `json:"phone" validate:"omitempty,phone"`
+	AvatarURL string `json:"avatar_url" validate:"omitempty,url"`
+	Address   string `json:"address" validate:"omitempty,max=500"`
 }

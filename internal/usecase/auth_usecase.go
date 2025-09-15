@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/rand"
 	"employee-attendance-system/internal/entity/domain"
+	"employee-attendance-system/internal/entity/dto"
 	"employee-attendance-system/internal/repository"
 	utils "employee-attendance-system/internal/util"
 	"encoding/hex"
@@ -24,6 +25,8 @@ type AuthUseCase interface {
 	RefreshToken(ctx context.Context, refreshToken string, deviceID string) (string, string, error) // newAccessToken
 	ChangeRole(ctx context.Context, userID uuid.UUID, role string) error
 	Signout(ctx context.Context, tokenHash string) error
+	UpdateProfile(ctx context.Context, userID uuid.UUID, req dto.UpdateProfileRequest) (*domain.UserProfile, error)
+	GetProfile(ctx context.Context, userID uuid.UUID) (*domain.UserProfile, error)
 }
 
 type authUseCase struct {
@@ -45,16 +48,22 @@ func NewAuthUseCase(
 		jwtUtils: jwtUtils}
 
 }
+func GenerateEmployeeCode() string {
+	return fmt.Sprintf("EMP-%d", time.Now().UnixNano())
+}
 
-func (u *authUseCase) Signup(ctx context.Context, email, password, fullName string) (*domain.User, error) {
-
-	if err := u.validate.Struct(&struct {
-		Email    string `validate:"required,email"`
-		Password string `validate:"required,min=8"`
-		FullName string `validate:"required"`
-	}{Email: email, Password: password, FullName: fullName}); err != nil {
+func (u *authUseCase) GetProfile(ctx context.Context, userID uuid.UUID) (*domain.UserProfile, error) {
+	profile, err := u.repo.FindUserProfileByUserID(userID)
+	if err != nil {
 		return nil, err
 	}
+	if profile.DepartmentID == nil {
+		profile.Department = nil
+	}
+	return profile, nil
+}
+
+func (u *authUseCase) Signup(ctx context.Context, email, password, fullName string) (*domain.User, error) {
 
 	exist, err := u.repo.FindUserByEmail(email)
 	if err != nil {
@@ -68,9 +77,10 @@ func (u *authUseCase) Signup(ctx context.Context, email, password, fullName stri
 	if err != nil {
 		return nil, err
 	}
-
+	code := GenerateEmployeeCode()
 	user := &domain.User{Email: email, Status: "active", EmailVerified: true}
-	profile := &domain.UserProfile{FullName: fullName}
+	profile := &domain.UserProfile{FullName: fullName,
+		EmployeeCode: code}
 	security := &domain.UserSecurity{Password: string(hashedPassword)}
 	role := &domain.ApplicationRole{Role: "user"}
 
@@ -100,15 +110,12 @@ func (u *authUseCase) Signin(ctx context.Context, email, password string, device
 		return "", "", nil, err
 	}
 
-	// secret := u.config.GetString("jwt.secret")
-
-	// accessToken, err := utils.GenerateAccessToken(secret, user.ID, user.Email, role)
-	accessToken, err := u.jwtUtils.GenerateToken(ctx, user.ID, user.Email, role, utils.AccessToken)
+	accessToken, err := u.jwtUtils.GenerateToken(ctx, user.ID, user.Email, string(role), utils.AccessToken)
 	if err != nil {
 		return "", "", nil, err
 	}
 
-	refreshToken, err := u.jwtUtils.GenerateToken(ctx, user.ID, user.Email, role, utils.RefreshToken)
+	refreshToken, err := u.jwtUtils.GenerateToken(ctx, user.ID, user.Email, string(role), utils.RefreshToken)
 	refresh := &domain.RefreshToken{
 		SourceUserID: user.ID,
 		TokenHash:    refreshToken,
@@ -169,7 +176,7 @@ func (u *authUseCase) RefreshToken(ctx context.Context, refreshToken string, dev
 	}
 
 	// Generate access token baru
-	accessToken, err := u.jwtUtils.GenerateToken(ctx, user.ID, user.Email, role, utils.AccessToken)
+	accessToken, err := u.jwtUtils.GenerateToken(ctx, user.ID, user.Email, string(role), utils.AccessToken)
 	if err != nil {
 		return "", "", err
 	}
@@ -191,9 +198,41 @@ func (u *authUseCase) RefreshToken(ctx context.Context, refreshToken string, dev
 }
 
 func (u *authUseCase) ChangeRole(ctx context.Context, userID uuid.UUID, role string) error {
-	return u.repo.AssignRole(userID, role)
+	r := domain.Role(role)
+	return u.repo.AssignRole(userID, r)
 }
 
 func (u *authUseCase) Signout(ctx context.Context, tokenHash string) error {
 	return u.repo.RevokeRefreshToken(tokenHash)
+}
+
+func (u *authUseCase) UpdateProfile(ctx context.Context, userID uuid.UUID, req dto.UpdateProfileRequest) (*domain.UserProfile, error) {
+	// Cari profile existing
+	profile, err := u.repo.FindUserProfileByUserID(userID)
+	if err != nil {
+		return nil, err
+	}
+	if profile == nil {
+		return nil, fmt.Errorf("profile not found")
+	}
+
+	// Update fields (hanya yang diisi)
+	if req.FullName != "" {
+		profile.FullName = req.FullName
+	}
+	if req.Phone != "" {
+		profile.Phone = req.Phone
+	}
+	if req.AvatarURL != "" {
+		profile.AvatarURL = req.AvatarURL
+	}
+	if req.Address != "" {
+		profile.Address = req.Address
+	}
+
+	if err := u.repo.UpdateUserProfile(profile); err != nil {
+		return nil, err
+	}
+
+	return profile, nil
 }
