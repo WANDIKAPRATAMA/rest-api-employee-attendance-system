@@ -1,5 +1,7 @@
 package dto
 
+import "github.com/google/uuid"
+
 type SignupRequest struct {
 	Email    string `json:"email" validate:"required,email"`
 	Password string `json:"password" validate:"required,min=8"`
@@ -29,4 +31,13 @@ type UpdateProfileRequest struct {
 	Phone     string `json:"phone" validate:"omitempty,phone"`
 	AvatarURL string `json:"avatar_url" validate:"omitempty,url"`
 	Address   string `json:"address" validate:"omitempty,max=500"`
+}
+type ProfileResponse struct {
+	ID           uuid.UUID `json:"id"`
+	SourceUserID uuid.UUID `json:"source_user_id"`
+	EmployeeCode string    `json:"employee_code"`
+	FullName     string    `json:"full_name"`
+	Phone        string    `json:"phone"`
+	AvatarURL    string    `json:"avatar_url"`
+	Address      string    `json:"address"`
 }
