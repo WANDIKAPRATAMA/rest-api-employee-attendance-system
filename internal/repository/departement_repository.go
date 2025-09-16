@@ -3,6 +3,7 @@ package repository
 
 import (
 	"employee-attendance-system/internal/entity/domain"
+	"fmt"
 
 	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
@@ -15,6 +16,8 @@ type DepartmentRepository interface {
 	UpdateDepartment(dept *domain.Department) error
 	DeleteDepartment(id uuid.UUID) error
 	FindAllDepartments(offset, limit int) ([]*domain.Department, int64, error)
+	IsDepartmentExist(departmentID uuid.UUID) (bool, error)
+	AssignmentDepartement(userID uuid.UUID, departmentID uuid.UUID) error
 }
 
 type departmentRepository struct {
@@ -25,7 +28,36 @@ type departmentRepository struct {
 func NewDepartmentRepository(db *gorm.DB, log *logrus.Logger) DepartmentRepository {
 	return &departmentRepository{db: db, log: log}
 }
+func (r *departmentRepository) AssignmentDepartement(userID uuid.UUID, departmentID uuid.UUID) error {
+	result := r.db.Model(&domain.UserProfile{}).
+		Where("source_user_id = ?", userID).
+		Updates(map[string]interface{}{
+			"department_id": departmentID,
+			"updated_at":    r.db.NowFunc(),
+		})
 
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return fmt.Errorf("no user profile updated")
+	}
+	return nil
+}
+func (r *departmentRepository) IsDepartmentExist(departmentID uuid.UUID) (bool, error) {
+	var exists bool
+	err := r.db.
+		Model(&domain.Department{}).
+		Select("1").
+		Where("id = ?", departmentID).
+		Limit(1).
+		Scan(&exists).Error
+
+	if err != nil {
+		return false, err
+	}
+	return exists, nil
+}
 func (r *departmentRepository) CreateDepartment(dept *domain.Department) error {
 	return r.db.Create(dept).Error
 }

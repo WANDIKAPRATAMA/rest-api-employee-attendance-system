@@ -33,8 +33,11 @@ func NewAppConfig(config *AppConfig) {
 	authController := controller.NewAuthController(authUseCase, config.Log, config.Validate)
 	authMiddleware := middleware.NewAuth(authUseCase, config.Log, config.Viper, jwtUtils)
 
+	userUseCase := usecase.NewUserUseCase(userRepo, config.Log, config.Validate)
+	userController := controller.NewUserController(userUseCase, config.Log, config.Validate)
+
 	deptRepo := repository.NewDepartmentRepository(config.DB, config.Log)
-	deptUseCase := usecase.NewDepartmentUseCase(deptRepo, config.Log, config.Validate)
+	deptUseCase := usecase.NewDepartmentUseCase(deptRepo, config.Log, config.Validate, userRepo)
 	deptController := controller.NewDepartmentController(deptUseCase, config.Log, config.Validate)
 
 	attRepo := repository.NewAttendanceRepository(config.DB, config.Log)
@@ -47,9 +50,9 @@ func NewAppConfig(config *AppConfig) {
 		AuthMiddleware: authMiddleware,
 	}
 
-	profileRoutesConfig := route.ProfileRouteConfig{
+	profileRoutesConfig := route.UserRouteConfig{
 		App:            config.App,
-		AuthController: authController,
+		UserController: userController,
 		AuthMiddleware: authMiddleware,
 	}
 

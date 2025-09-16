@@ -20,6 +20,7 @@ type DepartmentController interface {
 	UpdateDepartment(c *fiber.Ctx) error
 	DeleteDepartment(c *fiber.Ctx) error
 	GetDepartments(c *fiber.Ctx) error // List with pagination
+	AssignmentDepartement(ctx *fiber.Ctx) error
 }
 
 type departmentController struct {
@@ -30,6 +31,46 @@ type departmentController struct {
 
 func NewDepartmentController(usecase usecase.DepartmentUseCase, log *logrus.Logger, validate *validator.Validate) DepartmentController {
 	return &departmentController{usecase: usecase, log: log, validate: validate}
+}
+func (c *departmentController) AssignmentDepartement(ctx *fiber.Ctx) error {
+	var req dto.AssignmentDepartementRequest
+	allowedFields := utils.GenerateAllowedFields(dto.AssignmentDepartementRequest{})
+	if err := utils.BindAndValidateBody(ctx, &req, allowedFields, c.validate); err != nil {
+		var errors []utils.ErrorDetail
+		if validationErr := c.validate.Struct(req); validationErr != nil {
+			for _, e := range validationErr.(validator.ValidationErrors) {
+				errors = append(errors, utils.ErrorDetail{Field: e.Field(), Message: e.Error()})
+			}
+		}
+		return ctx.Status(fiber.StatusBadRequest).JSON(utils.ErrorResponse(fiber.StatusBadRequest, err.Error(), errors))
+	}
+	if middleware.GetLocalKeys(ctx).Role != "admin" {
+		return ctx.Status(fiber.StatusForbidden).JSON(utils.ErrorResponse(fiber.StatusForbidden, "Admin only", nil))
+	}
+
+	err := c.usecase.AssignmentDepartement(ctx.Context(), req)
+	if err != nil {
+		statusCode := fiber.StatusBadRequest
+		message := err.Error()
+		errors := []utils.ErrorDetail{{Field: "", Message: message}}
+
+		switch message {
+		case "user not found":
+			statusCode = fiber.StatusNotFound
+			errors = []utils.ErrorDetail{{Field: "user", Message: message}}
+		case "department not found":
+			statusCode = fiber.StatusNotFound
+			errors = []utils.ErrorDetail{{Field: "department", Message: message}}
+
+		}
+
+		return ctx.Status(statusCode).JSON(utils.ErrorResponse(
+			statusCode,
+			message,
+			errors,
+		))
+	}
+	return ctx.Status(fiber.StatusOK).JSON(utils.SuccessResponse(fiber.StatusOK, "Success", nil, struct{}{}))
 }
 
 func (c *departmentController) CreateDepartment(ctx *fiber.Ctx) error {

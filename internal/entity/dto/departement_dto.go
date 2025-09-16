@@ -8,15 +8,15 @@ import (
 
 // Untuk Department
 type CreateDepartmentRequest struct {
-	Name            string    `json:"name" validate:"required,min=3,max=255"`
-	MaxClockInTime  time.Time `json:"max_clock_in_time" validate:"required"`  // e.g., "09:00:00"
-	MaxClockOutTime time.Time `json:"max_clock_out_time" validate:"required"` // e.g., "17:00:00"
+	Name            string `json:"name" validate:"required,min=3,max=255"`
+	MaxClockInTime  string `json:"max_clock_in_time" validate:"required"`  // e.g., "09:00:00"
+	MaxClockOutTime string `json:"max_clock_out_time" validate:"required"` // e.g., "17:00:00"
 }
 
 type UpdateDepartmentRequest struct {
 	Name            string    `json:"name" validate:"omitempty,min=3,max=255"`
-	MaxClockInTime  time.Time `json:"max_clock_in_time" validate:"omitempty"`
-	MaxClockOutTime time.Time `json:"max_clock_out_time" validate:"omitempty"`
+	MaxClockInTime  time.Time `json:"max_clock_in_time" validate:"omitempty"`  // hanya jam
+	MaxClockOutTime time.Time `json:"max_clock_out_time" validate:"omitempty"` // hanya jam
 }
 
 type DepartmentResponse struct {
@@ -48,14 +48,16 @@ type AttendanceResponse struct {
 }
 
 type AttendanceLogResponse struct {
-	AttendanceID   string     `json:"attendance_id"`
-	EmployeeCode   string     `json:"employee_code"`
-	FullName       string     `json:"full_name"`
-	DepartmentName string     `json:"department_name"`
-	ClockIn        *time.Time `json:"clock_in"`
-	ClockOut       *time.Time `json:"clock_out"`
-	InPunctuality  string     `json:"in_punctuality"`  // "On Time" or "Late"
-	OutPunctuality string     `json:"out_punctuality"` // "On Time" or "Early Leave"
+	AttendanceID    string     `json:"attendance_id"`
+	EmployeeCode    string     `json:"employee_code"`
+	FullName        string     `json:"full_name"`
+	DepartmentName  string     `json:"department_name"`
+	ClockIn         *time.Time `json:"clock_in"`
+	ClockOut        *time.Time `json:"clock_out"`
+	InPunctuality   string     `json:"in_punctuality"`  // "On Time" or "Late"
+	OutPunctuality  string     `json:"out_punctuality"` // "On Time" or "Early Leave"
+	MaxClockInTime  *time.Time `json:"-"`               // hanya untuk perhitungan, tidak dikirim ke client
+	MaxClockOutTime *time.Time `json:"-"`
 }
 
 // Untuk filters di GET logs
@@ -64,4 +66,19 @@ type GetAttendanceLogsRequest struct {
 	DepartmentID *uuid.UUID `query:"department_id" validate:"omitempty,uuid"`
 	Page         int        `query:"page" validate:"omitempty,min=1"`          // Default 1
 	Limit        int        `query:"limit" validate:"omitempty,min=1,max=100"` // Default 10
+}
+type AssignmentDepartementRequest struct {
+	DepartmentID uuid.UUID `json:"department_id" validate:"omitempty,uuid"`
+	UserID       uuid.UUID `json:"user_id" validate:"omitempty,uuid"`
+}
+
+type RawAttendanceLog struct {
+	AttendanceID    string     `gorm:"column:attendance_id"`
+	EmployeeCode    string     `gorm:"column:employee_code"`
+	FullName        string     `gorm:"column:full_name"`
+	DepartmentName  string     `gorm:"column:department_name"`
+	ClockIn         *time.Time `gorm:"column:clock_in"`
+	ClockOut        *time.Time `gorm:"column:clock_out"`
+	MaxClockInTime  *time.Time `gorm:"column:max_clock_in_time"`  // Menggunakan pointer untuk handle NULL
+	MaxClockOutTime *time.Time `gorm:"column:max_clock_out_time"` // Menggunakan pointer untuk handle NULL
 }

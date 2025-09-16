@@ -18,8 +18,6 @@ type AuthController interface {
 	RefreshToken(c *fiber.Ctx) error
 	ChangeRole(c *fiber.Ctx) error
 	Signout(c *fiber.Ctx) error
-	UpdateProfile(c *fiber.Ctx) error
-	GetProfile(ctx *fiber.Ctx) error
 }
 
 type authController struct {
@@ -191,63 +189,4 @@ func (c *authController) Signout(ctx *fiber.Ctx) error {
 	}
 
 	return ctx.Status(fiber.StatusOK).JSON(utils.SuccessResponse(fiber.StatusOK, "Signout successful", nil, nil))
-}
-
-func (c *authController) UpdateProfile(ctx *fiber.Ctx) error {
-	var req dto.UpdateProfileRequest
-	allowedFields := utils.GenerateAllowedFields(dto.UpdateProfileRequest{})
-	if err := utils.BindAndValidateBody(ctx, &req, allowedFields, c.validate); err != nil {
-		var errors []utils.ErrorDetail
-		if validationErr := c.validate.Struct(req); validationErr != nil {
-			for _, e := range validationErr.(validator.ValidationErrors) {
-				var msg string
-				switch e.Tag() {
-				case "phone":
-					msg = "Phone number must be 8-15 digits (optionally with +)"
-				case "url":
-					msg = "Invalid URL format"
-				default:
-					msg = e.Error()
-				}
-
-				errors = append(errors, utils.ErrorDetail{
-					Field:   e.Field(),
-					Message: msg,
-				})
-			}
-		}
-		return ctx.Status(fiber.StatusBadRequest).JSON(utils.ErrorResponse(fiber.StatusBadRequest, err.Error(), errors))
-	}
-
-	userID := middleware.GetLocalKeys(ctx).UserID
-
-	updatedProfile, err := c.usecase.UpdateProfile(ctx.Context(), userID, req)
-	if err != nil {
-		return ctx.Status(fiber.StatusInternalServerError).JSON(utils.ErrorResponse(fiber.StatusInternalServerError, err.Error(), nil))
-	}
-
-	return ctx.Status(fiber.StatusOK).JSON(utils.SuccessResponse(fiber.StatusOK, "Profile updated successfully", fiber.Map{
-		"id":            updatedProfile.ID,
-		"full_name":     updatedProfile.FullName,
-		"phone":         updatedProfile.Phone,
-		"avatar_url":    updatedProfile.AvatarURL,
-		"address":       updatedProfile.Address,
-		"department_id": updatedProfile.DepartmentID,
-	}, nil))
-}
-
-func (c *authController) GetProfile(ctx *fiber.Ctx) error {
-	userID := middleware.GetLocalKeys(ctx).UserID
-
-	profile, err := c.usecase.GetProfile(ctx.Context(), userID)
-	if err != nil {
-		return ctx.Status(fiber.StatusInternalServerError).JSON(utils.ErrorResponse(fiber.StatusInternalServerError, err.Error(), nil))
-	}
-
-	return ctx.Status(fiber.StatusOK).JSON(utils.SuccessResponse(
-		fiber.StatusCreated,
-		"Profile Retrieved Successfully",
-		profile,
-		struct{}{},
-	))
 }

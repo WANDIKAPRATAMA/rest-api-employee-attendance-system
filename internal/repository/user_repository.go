@@ -2,6 +2,7 @@ package repository
 
 import (
 	"employee-attendance-system/internal/entity/domain"
+	"employee-attendance-system/internal/entity/dto"
 	"time"
 
 	"github.com/google/uuid"
@@ -24,6 +25,8 @@ type UserRepository interface {
 	UpdateRefreshToken(token *domain.RefreshToken) error
 	UpdateUserProfile(profile *domain.UserProfile) error
 	FindUserProfileByUserID(userID uuid.UUID) (*domain.UserProfile, error)
+	IsUserExist(userID uuid.UUID) (bool, error)
+	FindAllUsers(req dto.ListUsersRequest) ([]*domain.UserProfile, int64, error)
 }
 
 type userRepository struct {
@@ -89,7 +92,20 @@ func (r *userRepository) FindUserByID(user_id uuid.UUID) (*domain.User, error) {
 	}
 	return &user, nil
 }
+func (r *userRepository) IsUserExist(userID uuid.UUID) (bool, error) {
+	var exists bool
+	err := r.db.
+		Model(&domain.User{}).
+		Select("1").
+		Where("id = ?", userID).
+		Limit(1).
+		Scan(&exists).Error
 
+	if err != nil {
+		return false, err
+	}
+	return exists, nil
+}
 func (r *userRepository) FindUserSecurityByUserID(userID uuid.UUID) (*domain.UserSecurity, error) {
 	var security domain.UserSecurity
 	if err := r.db.Where("source_user_id = ?", userID).First(&security).Error; err != nil {
@@ -133,6 +149,7 @@ func (r *userRepository) UpdateRefreshToken(token *domain.RefreshToken) error {
 func (r *userRepository) UpdateUserProfile(profile *domain.UserProfile) error {
 	return r.db.Save(profile).Error
 }
+
 func (r *userRepository) FindUserProfileByUserID(userID uuid.UUID) (*domain.UserProfile, error) {
 	var profile domain.UserProfile
 	err := r.db.Preload("Department").Where("source_user_id = ?", userID).First(&profile).Error
@@ -143,4 +160,44 @@ func (r *userRepository) FindUserProfileByUserID(userID uuid.UUID) (*domain.User
 		return nil, err
 	}
 	return &profile, nil
+}
+
+func (r *userRepository) FindAllUsers(req dto.ListUsersRequest) ([]*domain.UserProfile, int64, error) {
+	var users []*domain.UserProfile
+
+	query := r.db.Model(&domain.UserProfile{}).
+		Preload("Department").
+		Preload("ApplicationRole").
+		Where("user_profiles.deleted_at IS NULL")
+
+	// Dynamic filters
+	if req.Email != "" {
+		query = query.Joins("JOIN users u ON u.id = user_profiles.source_user_id").
+			Where("u.email LIKE ?", "%"+req.Email+"%")
+	}
+	if req.Status != "" {
+		query = query.Joins("JOIN users u ON u.id = user_profiles.source_user_id").
+			Where("u.status = ?", req.Status)
+	}
+	if req.DepartmentID != nil {
+		query = query.Where("department_id = ?", *req.DepartmentID)
+	}
+	if req.CreatedAtStart != nil {
+		query = query.Where("user_profiles.created_at >= ?", req.CreatedAtStart)
+	}
+	if req.CreatedAtEnd != nil {
+		query = query.Where("user_profiles.created_at <= ?", req.CreatedAtEnd)
+	}
+
+	var total int64
+	if err := query.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	offset := (req.Page - 1) * req.Limit
+	if err := query.Offset(offset).Limit(req.Limit).Find(&users).Error; err != nil {
+		return nil, 0, err
+	}
+
+	return users, total, nil
 }

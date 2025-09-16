@@ -110,7 +110,28 @@ func NewDatabase(viper *viper.Viper, log *logrus.Logger) *gorm.DB {
 	if err != nil {
 		log.Fatalf("failed to auto migrate: %v", err)
 	}
+	indexCommands := []struct {
+		tableName string
+		sql       string
+	}{
+		{
+			tableName: "departments",
+			sql: `
+                ALTER TABLE departments ALTER COLUMN max_clock_in_time TYPE TIME USING max_clock_in_time::time,
+				ALTER TABLE departments ALTER COLUMN max_clock_out_time TYPE TIME USING max_clock_out_time::time,
 
+            `,
+		},
+	}
+
+	for _, cmd := range indexCommands {
+		log.Printf("Menjalankan indeks untuk tabel %s", cmd.tableName)
+		if err := db.Exec(cmd.sql).Error; err != nil {
+			log.Printf("Gagal membuat indeks untuk tabel %s: %v", cmd.tableName, err)
+			log.Printf("Gagal menambahkan indeks: %v", err)
+		}
+		log.Printf("Berhasil membuat indeks untuk tabel %s", cmd.tableName)
+	}
 	return db
 }
 

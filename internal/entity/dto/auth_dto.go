@@ -1,6 +1,11 @@
 package dto
 
-import "github.com/google/uuid"
+import (
+	"employee-attendance-system/internal/entity/domain"
+	"time"
+
+	"github.com/google/uuid"
+)
 
 type SignupRequest struct {
 	Email    string `json:"email" validate:"required,email"`
@@ -40,4 +45,30 @@ type ProfileResponse struct {
 	Phone        string    `json:"phone"`
 	AvatarURL    string    `json:"avatar_url"`
 	Address      string    `json:"address"`
+}
+
+// Request untuk filter dynamic
+type ListUsersRequest struct {
+	Email          string     `query:"email" validate:"omitempty,email"`
+	Status         string     `query:"status" validate:"omitempty,oneof=active inactive"`
+	DepartmentID   *uuid.UUID `query:"department_id" validate:"omitempty,uuid"`
+	CreatedAtStart *time.Time `query:"created_at_start" validate:"omitempty,datetime"` // e.g., 2025-09-16
+	CreatedAtEnd   *time.Time `query:"created_at_end" validate:"omitempty,datetime"`
+	Page           int        `query:"page" validate:"omitempty,min=1"`          // Default 1
+	Limit          int        `query:"limit" validate:"omitempty,min=1,max=100"` // Default 10
+}
+
+type UserResponse struct {
+	ID              uuid.UUID               `json:"id"`
+	SourceUserID    uuid.UUID               `json:"source_user_id"`
+	EmployeeCode    string                  `json:"employee_code"`
+	DepartmentID    *uuid.UUID              `json:"department_id,omitempty"`
+	FullName        string                  `json:"full_name"`
+	Phone           string                  `json:"phone"`
+	AvatarURL       string                  `json:"avatar_url"`
+	Address         string                  `json:"address"`
+	CreatedAt       time.Time               `json:"created_at"`
+	UpdatedAt       time.Time               `json:"updated_at"`
+	Department      *DepartmentResponse     `json:"department,omitempty"`
+	ApplicationRole *domain.ApplicationRole `json:"application_role,omitempty"`
 }

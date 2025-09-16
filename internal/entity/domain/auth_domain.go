@@ -15,12 +15,12 @@ const (
 )
 
 type ApplicationRole struct {
-	ID           uuid.UUID      `gorm:"type:uuid;primaryKey;default:uuid_generate_v4()"`
-	SourceUserID uuid.UUID      `gorm:"column:source_user_id;type:uuid;not null"`
-	Role         Role           `gorm:"type:app_role;not null"`
-	CreatedAt    time.Time      `gorm:"default:current_timestamp"`
-	UpdatedAt    time.Time      `gorm:"default:current_timestamp"`
-	DeletedAt    gorm.DeletedAt `gorm:"index"`
+	ID           uuid.UUID      `gorm:"type:uuid;primaryKey;default:uuid_generate_v4()" json:"id"`
+	SourceUserID uuid.UUID      `gorm:"column:source_user_id;type:uuid;not null" json:"source_user_id"`
+	Role         Role           `gorm:"type:app_role;not null" json:"role"`
+	CreatedAt    time.Time      `gorm:"default:current_timestamp" json:"created_at"`
+	UpdatedAt    time.Time      `gorm:"default:current_timestamp" json:"updated_at"`
+	DeletedAt    gorm.DeletedAt `gorm:"index" json:"-"`
 }
 
 type RefreshToken struct {

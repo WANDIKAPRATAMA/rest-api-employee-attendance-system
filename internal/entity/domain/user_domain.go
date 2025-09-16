@@ -41,5 +41,6 @@ type UserProfile struct {
 	DeletedAt    gorm.DeletedAt `gorm:"index" json:"-"`
 
 	// Relationships
-	Department *Department `gorm:"foreignKey:DepartmentID" json:"department,omitempty"`
+	Department      *Department      `gorm:"foreignKey:DepartmentID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;" json:"department,omitempty"`
+	ApplicationRole *ApplicationRole `gorm:"foreignKey:SourceUserID;references:SourceUserID" json:"application_role,omitempty"`
 }

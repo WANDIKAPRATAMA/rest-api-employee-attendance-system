@@ -21,4 +21,6 @@ func (r *DepartmentRouteConfig) Setup() {
 	dept.Put("/:id", r.AuthMiddleware.Authenticate, r.DepartmentController.UpdateDepartment)
 	dept.Delete("/:id", r.AuthMiddleware.Authenticate, r.DepartmentController.DeleteDepartment)
 	dept.Get("", r.AuthMiddleware.Authenticate, r.DepartmentController.GetDepartments) // List
+	dept.Post("/assignment", r.AuthMiddleware.Authenticate, r.DepartmentController.AssignmentDepartement)
+
 }
