@@ -152,7 +152,11 @@ func (r *userRepository) UpdateUserProfile(profile *domain.UserProfile) error {
 
 func (r *userRepository) FindUserProfileByUserID(userID uuid.UUID) (*domain.UserProfile, error) {
 	var profile domain.UserProfile
-	err := r.db.Preload("Department").Where("source_user_id = ?", userID).First(&profile).Error
+	err := r.db.
+		Model(&domain.UserProfile{}).
+		Preload("Department").
+		Where("source_user_id = ?", userID).
+		First(&profile).Error
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, nil

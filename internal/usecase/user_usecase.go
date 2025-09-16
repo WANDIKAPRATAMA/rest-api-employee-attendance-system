@@ -98,6 +98,8 @@ func (u *userUseCase) GetProfile(ctx context.Context, userID uuid.UUID) (*domain
 	if err != nil {
 		return nil, err
 	}
+	u.log.Printf("DepartmentID: %v\n", profile.DepartmentID)
+	u.log.Printf("Department: %+v\n", profile.Department)
 	if profile.DepartmentID == nil {
 		profile.Department = nil
 	}

@@ -71,4 +71,5 @@ type UserResponse struct {
 	UpdatedAt       time.Time               `json:"updated_at"`
 	Department      *DepartmentResponse     `json:"department,omitempty"`
 	ApplicationRole *domain.ApplicationRole `json:"application_role,omitempty"`
+	Email           string                  `json:"email"`
 }

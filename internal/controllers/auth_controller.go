@@ -183,7 +183,7 @@ func (c *authController) ChangeRole(ctx *fiber.Ctx) error {
 }
 
 func (c *authController) Signout(ctx *fiber.Ctx) error {
-	tokenHash := ctx.Get("Authorization") // Simulasi, ganti dengan ekstrak dari header
+	tokenHash := ctx.Get("Authorization")
 	if err := c.usecase.Signout(ctx.Context(), tokenHash); err != nil {
 		return ctx.Status(fiber.StatusInternalServerError).JSON(utils.ErrorResponse(fiber.StatusInternalServerError, err.Error(), nil))
 	}

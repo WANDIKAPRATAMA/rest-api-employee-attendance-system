@@ -36,11 +36,9 @@ func NewDepartmentUseCase(repo repository.DepartmentRepository, log *logrus.Logg
 }
 
 func (u *departmentUseCase) AssignmentDepartement(ctx context.Context, req dto.AssignmentDepartementRequest) error {
-	if exist, err := u.userRepo.IsUserExist(req.UserID); !exist || err != nil {
-		if err == gorm.ErrRecordNotFound {
-			return fmt.Errorf("user not found")
-		}
-		return err
+	if exist, _ := u.userRepo.IsUserExist(req.UserID); !exist {
+
+		return fmt.Errorf("user not found")
 	}
 
 	if role, err := u.userRepo.FindUserRoleByUserID(req.UserID); role == domain.Admin || err != nil {

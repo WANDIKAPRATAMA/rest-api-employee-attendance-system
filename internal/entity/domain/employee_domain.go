@@ -9,13 +9,13 @@ import (
 
 // New struct for Department
 type Department struct {
-	ID              uuid.UUID      `gorm:"type:uuid;primaryKey;default:uuid_generate_v4()"`
-	Name            string         `gorm:"column:department_name;type:varchar(255);not null"`
-	MaxClockInTime  time.Time      `gorm:"type:time;not null"` // Time only (e.g., 09:00:00)
-	MaxClockOutTime time.Time      `gorm:"type:time;not null"` // Time only (e.g., 17:00:00)
-	CreatedAt       time.Time      `gorm:"default:current_timestamp"`
-	UpdatedAt       time.Time      `gorm:"default:current_timestamp"`
-	DeletedAt       gorm.DeletedAt `gorm:"index"`
+	ID              uuid.UUID      `json:"id" gorm:"type:uuid;primaryKey;default:uuid_generate_v4()"`
+	Name            string         `json:"name" gorm:"column:department_name;type:varchar(255);not null"`
+	MaxClockInTime  time.Time      `json:"max_clock_in_time" gorm:"type:time;not null"`
+	MaxClockOutTime time.Time      `json:"max_clock_out_time" gorm:"type:time;not null"`
+	CreatedAt       time.Time      `json:"created_at" gorm:"default:current_timestamp"`
+	UpdatedAt       time.Time      `json:"updated_at" gorm:"default:current_timestamp"`
+	DeletedAt       gorm.DeletedAt `json:"-" gorm:"index"`
 }
 
 // New struct for Attendance (daily record)

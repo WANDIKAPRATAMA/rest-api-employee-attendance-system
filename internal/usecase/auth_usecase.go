@@ -4,9 +4,11 @@ import (
 	"context"
 	"crypto/rand"
 	"employee-attendance-system/internal/entity/domain"
+	"employee-attendance-system/internal/entity/dto"
 	"employee-attendance-system/internal/repository"
 	utils "employee-attendance-system/internal/util"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"time"
 
@@ -15,11 +17,12 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 	"golang.org/x/crypto/bcrypt"
+	"gorm.io/gorm"
 )
 
 type AuthUseCase interface {
 	Signup(ctx context.Context, email, password, fullName string) (*domain.User, error)
-	Signin(ctx context.Context, email, password string, deviceID *string) (string, string, *domain.User, error)
+	Signin(ctx context.Context, email, password string, deviceID *string) (string, string, *dto.UserResponse, error)
 	ChangePassword(ctx context.Context, userID uuid.UUID, oldPassword, newPassword string) error
 	RefreshToken(ctx context.Context, refreshToken string, deviceID string) (string, string, error) // newAccessToken
 	ChangeRole(ctx context.Context, userID uuid.UUID, role string) error
@@ -76,10 +79,16 @@ func (u *authUseCase) Signup(ctx context.Context, email, password, fullName stri
 	return user, nil
 }
 
-func (u *authUseCase) Signin(ctx context.Context, email, password string, deviceID *string) (string, string, *domain.User, error) {
+func (u *authUseCase) Signin(ctx context.Context, email, password string, deviceID *string) (string, string, *dto.UserResponse, error) {
 	user, err := u.repo.FindUserByEmail(email)
 	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return "", "", nil, fmt.Errorf("invalid email or password")
+		}
 		return "", "", nil, err
+	}
+	if user == nil {
+		return "", "", nil, fmt.Errorf("invalid email or password")
 	}
 
 	security, err := u.repo.FindUserSecurityByUserID(user.ID)
@@ -88,7 +97,7 @@ func (u *authUseCase) Signin(ctx context.Context, email, password string, device
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(security.Password), []byte(password)); err != nil {
-		return "", "", nil, err
+		return "", "", nil, fmt.Errorf("invalid email or password")
 	}
 
 	role, err := u.repo.FindUserRoleByUserID(user.ID)
@@ -102,17 +111,31 @@ func (u *authUseCase) Signin(ctx context.Context, email, password string, device
 	}
 
 	refreshToken, err := u.jwtUtils.GenerateToken(ctx, user.ID, user.Email, string(role), utils.RefreshToken)
+	if err != nil {
+		return "", "", nil, err
+	}
+
 	refresh := &domain.RefreshToken{
 		SourceUserID: user.ID,
 		TokenHash:    refreshToken,
-		ExpiresAt:    time.Now().Add(48 * 24 * time.Hour),
-		DeviceID:     *deviceID,
+		ExpiresAt:    time.Now().Add(48 * time.Hour), // hati-hati jangan * 24 dua kali
 	}
+	if deviceID != nil {
+		refresh.DeviceID = *deviceID
+	}
+
 	if err := u.repo.CreateRefreshToken(refresh); err != nil {
 		return "", "", nil, err
 	}
 
-	return accessToken, refreshToken, user, nil
+	profile, err := u.repo.FindUserProfileByUserID(user.ID)
+	if err != nil {
+		return "", "", nil, err
+	}
+	r := mapToUserResponse(profile)
+	r.Email = user.Email
+
+	return accessToken, refreshToken, r, nil
 }
 
 func (u *authUseCase) ChangePassword(ctx context.Context, userID uuid.UUID, oldPassword, newPassword string) error {

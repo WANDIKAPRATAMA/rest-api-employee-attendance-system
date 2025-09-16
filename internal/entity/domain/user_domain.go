@@ -7,24 +7,23 @@ import (
 	"gorm.io/gorm"
 )
 
-// Existing structs (unchanged)
 type User struct {
-	ID            uuid.UUID      `gorm:"type:uuid;primaryKey;default:uuid_generate_v4()"`
-	Email         string         `gorm:"type:varchar(255);unique;not null"`
-	Status        string         `gorm:"type:user_status;not null;default:'inactive'"`
-	EmailVerified bool           `gorm:"column:email_verified;not null;default:false"`
-	CreatedAt     time.Time      `gorm:"default:current_timestamp"`
-	UpdatedAt     time.Time      `gorm:"default:current_timestamp"`
-	DeletedAt     gorm.DeletedAt `gorm:"index"` // Soft delete
+	ID            uuid.UUID      `gorm:"type:uuid;primaryKey;default:uuid_generate_v4()" json:"id"`
+	Email         string         `gorm:"type:varchar(255);unique;not null" json:"email"`
+	Status        string         `gorm:"type:user_status;not null;default:'inactive'" json:"status"`
+	EmailVerified bool           `gorm:"column:email_verified;not null;default:false" json:"email_verified"`
+	CreatedAt     time.Time      `gorm:"default:current_timestamp" json:"created_at"`
+	UpdatedAt     time.Time      `gorm:"default:current_timestamp" json:"updated_at"`
+	DeletedAt     gorm.DeletedAt `gorm:"index" json:"deleted_at"` // Soft delete
 }
 
 type UserSecurity struct {
-	ID           uuid.UUID      `gorm:"type:uuid;primaryKey;default:uuid_generate_v4()"`
-	SourceUserID uuid.UUID      `gorm:"column:source_user_id;type:uuid;not null"`
-	Password     string         `gorm:"type:varchar(255);not null"`
-	CreatedAt    time.Time      `gorm:"default:current_timestamp"`
-	UpdatedAt    time.Time      `gorm:"default:current_timestamp"`
-	DeletedAt    gorm.DeletedAt `gorm:"index"`
+	ID           uuid.UUID      `gorm:"type:uuid;primaryKey;default:uuid_generate_v4()" json:"id"`
+	SourceUserID uuid.UUID      `gorm:"column:source_user_id;type:uuid;not null" json:"source_user_id"`
+	Password     string         `gorm:"type:varchar(255);not null" json:"password"`
+	CreatedAt    time.Time      `gorm:"default:current_timestamp" json:"created_at"`
+	UpdatedAt    time.Time      `gorm:"default:current_timestamp" json:"updated_at"`
+	DeletedAt    gorm.DeletedAt `gorm:"index" json:"deleted_at"`
 }
 
 type UserProfile struct {

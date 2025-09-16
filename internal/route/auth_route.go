@@ -22,6 +22,6 @@ func (r *RouteConfig) Setup() {
 	auth.Post("/change-password", r.AuthMiddleware.Authenticate, r.AuthController.ChangePassword)
 	auth.Post("/refresh-token", r.AuthController.RefreshToken)
 	auth.Post("/change-role", r.AuthMiddleware.Authenticate, r.AuthController.ChangeRole)
-	auth.Post("/signout", r.AuthMiddleware.Authenticate, r.AuthController.Signout)
+	auth.Post("/signout", r.AuthController.Signout)
 
 }
