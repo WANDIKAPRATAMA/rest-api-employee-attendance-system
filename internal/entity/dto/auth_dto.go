@@ -28,7 +28,8 @@ type RefreshTokenRequest struct {
 }
 
 type ChangeRoleRequest struct {
-	Role string `json:"role" validate:"required,oneof=employee admin "`
+	UserID *uuid.UUID `json:"user_id" validate:"omitempty,uuid"`
+	Role   string     `json:"role" validate:"required,oneof=employee admin "`
 }
 
 type UpdateProfileRequest struct {
@@ -52,10 +53,11 @@ type ListUsersRequest struct {
 	Email          string     `query:"email" validate:"omitempty,email"`
 	Status         string     `query:"status" validate:"omitempty,oneof=active inactive"`
 	DepartmentID   *uuid.UUID `query:"department_id" validate:"omitempty,uuid"`
-	CreatedAtStart *time.Time `query:"created_at_start" validate:"omitempty,datetime"` // e.g., 2025-09-16
-	CreatedAtEnd   *time.Time `query:"created_at_end" validate:"omitempty,datetime"`
-	Page           int        `query:"page" validate:"omitempty,min=1"`          // Default 1
-	Limit          int        `query:"limit" validate:"omitempty,min=1,max=100"` // Default 10
+	CreatedAtStart *time.Time `query:"created_at_start" validate:"omitempty"`
+	CreatedAtEnd   *time.Time `query:"created_at_end" validate:"omitempty"`
+
+	Page  int `query:"page" validate:"omitempty,min=1"`          // Default 1
+	Limit int `query:"limit" validate:"omitempty,min=1,max=100"` // Default 10
 }
 
 type UserResponse struct {

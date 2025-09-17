@@ -168,18 +168,37 @@ func (c *authController) ChangeRole(ctx *fiber.Ctx) error {
 				})
 			}
 		}
-		return ctx.Status(fiber.StatusBadRequest).JSON(utils.ErrorResponse(fiber.StatusBadRequest, err.Error(), errors))
+		return ctx.Status(fiber.StatusBadRequest).JSON(
+			utils.ErrorResponse(fiber.StatusBadRequest, err.Error(), errors),
+		)
 	}
 
 	localKeys := middleware.GetLocalKeys(ctx)
 	if localKeys == nil {
-		return ctx.Status(fiber.StatusInternalServerError).JSON(utils.ErrorResponse(fiber.StatusInternalServerError, "Internal Server error", nil))
-	}
-	if err := c.usecase.ChangeRole(ctx.Context(), localKeys.UserID, req.Role); err != nil {
-		return ctx.Status(fiber.StatusInternalServerError).JSON(utils.ErrorResponse(fiber.StatusInternalServerError, err.Error(), nil))
+		return ctx.Status(fiber.StatusInternalServerError).JSON(
+			utils.ErrorResponse(fiber.StatusInternalServerError, "Internal Server error", nil),
+		)
 	}
 
-	return ctx.Status(fiber.StatusOK).JSON(utils.SuccessResponse(fiber.StatusOK, "Role changed successfully", nil, nil))
+	targetUserID := localKeys.UserID
+	if req.UserID != nil {
+		if localKeys.Role != "admin" {
+			return ctx.Status(fiber.StatusForbidden).JSON(
+				utils.ErrorResponse(fiber.StatusForbidden, "Only admin can change another user's role", nil),
+			)
+		}
+		targetUserID = *req.UserID
+	}
+
+	if err := c.usecase.ChangeRole(ctx.Context(), targetUserID, req.Role); err != nil {
+		return ctx.Status(fiber.StatusInternalServerError).JSON(
+			utils.ErrorResponse(fiber.StatusInternalServerError, err.Error(), nil),
+		)
+	}
+
+	return ctx.Status(fiber.StatusOK).JSON(
+		utils.SuccessResponse(fiber.StatusOK, "Role changed successfully", nil, nil),
+	)
 }
 
 func (c *authController) Signout(ctx *fiber.Ctx) error {

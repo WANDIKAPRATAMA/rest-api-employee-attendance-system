@@ -172,8 +172,20 @@ func (r *userRepository) UpdateUserSecurity(userID uuid.UUID, newPassword string
 }
 
 func (r *userRepository) AssignRole(userID uuid.UUID, role domain.Role) error {
-	return r.db.Create(&domain.ApplicationRole{SourceUserID: userID, Role: role}).Error
+	now := time.Now()
+
+	appRole := domain.ApplicationRole{
+		SourceUserID: userID,
+		Role:         role,
+		UpdatedAt:    now,
+	}
+
+	return r.db.Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "source_user_id"}},
+		DoUpdates: clause.AssignmentColumns([]string{"role", "updated_at"}),
+	}).Create(&appRole).Error
 }
+
 func (r *userRepository) UpdateRefreshToken(token *domain.RefreshToken) error {
 	return r.db.Save(token).Error
 }

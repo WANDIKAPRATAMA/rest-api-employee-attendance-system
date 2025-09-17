@@ -25,6 +25,8 @@ type AppConfig struct {
 }
 
 func NewAppConfig(config *AppConfig) {
+	config.App.Use(middleware.SetupCORS())
+	config.App.Use(middleware.SetupRateLimiter())
 
 	jwtUtils := utils.NewJWTCfg(config.Viper)
 
