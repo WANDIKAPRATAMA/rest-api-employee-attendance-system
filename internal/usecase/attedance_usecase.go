@@ -19,19 +19,98 @@ type AttendanceUseCase interface {
 	ClockIn(ctx context.Context, userID uuid.UUID) (*dto.AttendanceResponse, error)
 	ClockOut(ctx context.Context, userID uuid.UUID) (*dto.AttendanceResponse, error)
 	GetAttendanceLogs(ctx context.Context, userID uuid.UUID, role string, req dto.GetAttendanceLogsRequest) ([]dto.AttendanceLogResponse, int64, error)
+	CheckCurrentStatus(ctx context.Context, userID uuid.UUID) (*dto.CurrentStatusResponse, error)
+	GetAdminDashboard(ctx context.Context, req dto.AdminDashboardRequest) (*dto.AdminDashboardResponse, error)
+	GetAttendanceHistory(ctx context.Context, req dto.GetAttendanceHistoryRequest) ([]*dto.AttendanceHistoryResponse, int64, error)
 }
 
 type attendanceUseCase struct {
 	repo        repository.AttendanceRepository
 	profileRepo repository.UserRepository // Untuk get employee code
+	deptRepo    repository.DepartmentRepository
 	log         *logrus.Logger
 	validate    *validator.Validate
 }
 
-func NewAttendanceUseCase(repo repository.AttendanceRepository, profileRepo repository.UserRepository, log *logrus.Logger, validate *validator.Validate) AttendanceUseCase {
-	return &attendanceUseCase{repo: repo, profileRepo: profileRepo, log: log, validate: validate}
+func NewAttendanceUseCase(repo repository.AttendanceRepository, profileRepo repository.UserRepository, deptRepo repository.DepartmentRepository, log *logrus.Logger, validate *validator.Validate) AttendanceUseCase {
+	return &attendanceUseCase{repo: repo, profileRepo: profileRepo,
+		deptRepo: deptRepo, log: log, validate: validate}
 
 }
+
+func (u *attendanceUseCase) GetAdminDashboard(ctx context.Context, req dto.AdminDashboardRequest) (*dto.AdminDashboardResponse, error) {
+	// Set default date range if not provided
+	now := time.Now()
+	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+	startDate := today.AddDate(0, 0, -30) // Default 30 days ago
+	endDate := today
+	if req.StartDate != nil {
+		startDate = *req.StartDate
+	}
+	if req.EndDate != nil {
+		endDate = *req.EndDate
+	}
+	if endDate.Before(startDate) {
+		return nil, fmt.Errorf("end_date cannot be before start_date")
+	}
+
+	// 1. Total Employees per Department
+	employeesPerDept, err := u.profileRepo.CountEmployeesPerDepartment()
+	if err != nil {
+		return nil, err
+	}
+
+	// 2. Total Updated Departments
+	updatedDepts, err := u.deptRepo.CountUpdatedDepartments(startDate, endDate)
+	if err != nil {
+		return nil, err
+	}
+
+	// 3. Total Registrations Today
+	todayRegistrations, err := u.profileRepo.CountTodayRegistrations(today)
+	if err != nil {
+		return nil, err
+	}
+
+	return &dto.AdminDashboardResponse{
+		TotalEmployeesPerDept:   employeesPerDept,
+		TotalUpdatedDepts:       updatedDepts,
+		TotalTodayRegistrations: todayRegistrations,
+	}, nil
+}
+
+func (u *attendanceUseCase) GetAttendanceHistory(ctx context.Context, req dto.GetAttendanceHistoryRequest) ([]*dto.AttendanceHistoryResponse, int64, error) {
+	profile, err := u.profileRepo.FindUserProfileByUserID(req.UserID)
+	if err != nil || profile == nil {
+		return nil, 0, fmt.Errorf("user not found")
+	}
+
+	histories, total, err := u.repo.FindAttendanceHistoryByEmployeeCode(profile.EmployeeCode, req.Page, req.Limit)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	res := make([]*dto.AttendanceHistoryResponse, len(histories))
+	for i, h := range histories {
+		res[i] = mapToAttendanceHistoryResponse(h)
+	}
+
+	return res, total, nil
+}
+
+func mapToAttendanceHistoryResponse(h *domain.AttendanceHistory) *dto.AttendanceHistoryResponse {
+	return &dto.AttendanceHistoryResponse{
+		ID:             h.ID,
+		EmployeeCode:   h.EmployeeCode,
+		AttendanceID:   h.AttendanceID,
+		DateAttendance: h.DateAttendance,
+		AttendanceType: string(h.AttendanceType),
+		Description:    h.Description,
+		CreatedAt:      h.CreatedAt,
+		UpdatedAt:      h.UpdatedAt,
+	}
+}
+
 func (u *attendanceUseCase) ClockIn(ctx context.Context, userID uuid.UUID) (*dto.AttendanceResponse, error) {
 	profile, err := u.profileRepo.FindUserProfileByUserID(userID)
 	if err != nil || profile == nil {
@@ -307,4 +386,48 @@ func parseDepartmentTime(base *time.Time, deptTime *time.Time, fallback string) 
 	// gabungkan tanggal dari base (clock_in/clock_out) dengan jam aturan dept
 	year, month, day := base.Date()
 	return time.Date(year, month, day, t.Hour(), t.Minute(), t.Second(), 0, base.Location())
+}
+
+func (u *attendanceUseCase) CheckCurrentStatus(ctx context.Context, userID uuid.UUID) (*dto.CurrentStatusResponse, error) {
+	profile, err := u.profileRepo.FindUserProfileByUserID(userID)
+	if err != nil || profile == nil {
+		return nil, fmt.Errorf("user not found")
+	}
+
+	attendance, err := u.repo.FindCurrentAttendance(profile.EmployeeCode)
+	if err != nil {
+		return nil, err
+	}
+
+	var status string
+	var clockIn, clockOut *time.Time
+
+	if attendance != nil {
+		clockIn = attendance.ClockIn
+		clockOut = attendance.ClockOut
+
+		if attendance.ClockIn != nil && attendance.ClockOut == nil {
+			status = "Clocked In"
+		} else if attendance.ClockIn != nil && attendance.ClockOut != nil {
+			status = "Clocked Out"
+		}
+	} else {
+		status = "Not Clocked"
+	}
+
+	deptName := ""
+	if profile.Department != nil {
+		deptName = profile.Department.Name
+	}
+
+	return &dto.CurrentStatusResponse{
+		UserID:       userID,
+		EmployeeCode: profile.EmployeeCode,
+		FullName:     profile.FullName,
+		Department:   deptName,
+		Status:       status,
+		ClockIn:      clockIn,
+		ClockOut:     clockOut,
+		UpdatedAt:    time.Now(),
+	}, nil
 }

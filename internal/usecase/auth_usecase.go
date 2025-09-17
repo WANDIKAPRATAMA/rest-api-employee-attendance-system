@@ -71,7 +71,7 @@ func (u *authUseCase) Signup(ctx context.Context, email, password, fullName stri
 	profile := &domain.UserProfile{FullName: fullName,
 		EmployeeCode: code}
 	security := &domain.UserSecurity{Password: string(hashedPassword)}
-	role := &domain.ApplicationRole{Role: "user"}
+	role := &domain.ApplicationRole{Role: domain.Employee}
 
 	if err := u.repo.CreateUser(user, profile, security, role); err != nil {
 		return nil, err
@@ -99,10 +99,20 @@ func (u *authUseCase) Signin(ctx context.Context, email, password string, device
 	if err := bcrypt.CompareHashAndPassword([]byte(security.Password), []byte(password)); err != nil {
 		return "", "", nil, fmt.Errorf("invalid email or password")
 	}
-
-	role, err := u.repo.FindUserRoleByUserID(user.ID)
+	var role domain.Role
+	profile, err := u.repo.FindUserProfileByUserID(user.ID)
 	if err != nil {
 		return "", "", nil, err
+	}
+
+	if profile.ApplicationRole.Role == "" {
+		r, err := u.repo.FindUserRoleByUserID(user.ID)
+		if err != nil {
+			return "", "", nil, err
+		}
+		role = r
+	} else {
+		role = profile.ApplicationRole.Role
 	}
 
 	accessToken, err := u.jwtUtils.GenerateToken(ctx, user.ID, user.Email, string(role), utils.AccessToken)
@@ -118,7 +128,7 @@ func (u *authUseCase) Signin(ctx context.Context, email, password string, device
 	refresh := &domain.RefreshToken{
 		SourceUserID: user.ID,
 		TokenHash:    refreshToken,
-		ExpiresAt:    time.Now().Add(48 * time.Hour), // hati-hati jangan * 24 dua kali
+		ExpiresAt:    time.Now().Add(24 * 30 * time.Hour),
 	}
 	if deviceID != nil {
 		refresh.DeviceID = *deviceID
@@ -128,10 +138,6 @@ func (u *authUseCase) Signin(ctx context.Context, email, password string, device
 		return "", "", nil, err
 	}
 
-	profile, err := u.repo.FindUserProfileByUserID(user.ID)
-	if err != nil {
-		return "", "", nil, err
-	}
 	r := mapToUserResponse(profile)
 	r.Email = user.Email
 

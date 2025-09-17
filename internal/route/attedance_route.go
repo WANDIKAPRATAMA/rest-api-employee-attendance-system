@@ -19,4 +19,9 @@ func (r *AttendanceRouteConfig) Setup() {
 	att.Post("/clock-in", r.AuthMiddleware.Authenticate, r.AttendanceController.ClockIn)
 	att.Put("/clock-out", r.AuthMiddleware.Authenticate, r.AttendanceController.ClockOut)
 	att.Get("/logs", r.AuthMiddleware.Authenticate, r.AttendanceController.GetAttendanceLogs)
+
+	att.Get("/history", r.AuthMiddleware.Authenticate, r.AttendanceController.GetAttendanceHistory)
+
+	att.Get("/admin", r.AuthMiddleware.Authenticate, r.AttendanceController.GetAdminDashboard)
+	att.Get("/current-status", r.AuthMiddleware.Authenticate, r.AttendanceController.CheckCurrentStatus)
 }

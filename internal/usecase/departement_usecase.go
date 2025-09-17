@@ -137,8 +137,6 @@ func (u *departmentUseCase) DeleteDepartment(ctx context.Context, id uuid.UUID) 
 	return u.repo.DeleteDepartment(id)
 }
 
-/*************  ✨ Windsurf Command ⭐  *************/
-/*******  2e04a59a-ec79-4895-bb60-83859705510f  *******/
 func (u *departmentUseCase) GetDepartments(ctx context.Context, page, limit int) ([]*dto.DepartmentResponse, int64, error) {
 	offset := (page - 1) * limit
 	depts, total, err := u.repo.FindAllDepartments(offset, limit)

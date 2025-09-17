@@ -41,7 +41,7 @@ func NewAppConfig(config *AppConfig) {
 	deptController := controller.NewDepartmentController(deptUseCase, config.Log, config.Validate)
 
 	attRepo := repository.NewAttendanceRepository(config.DB, config.Log)
-	attUseCase := usecase.NewAttendanceUseCase(attRepo, userRepo, config.Log, config.Validate) // Reuse profileRepo
+	attUseCase := usecase.NewAttendanceUseCase(attRepo, userRepo, deptRepo, config.Log, config.Validate) // Reuse profileRepo
 	attController := controller.NewAttendanceController(attUseCase, config.Log, config.Validate)
 
 	authRoutesConfig := route.RouteConfig{

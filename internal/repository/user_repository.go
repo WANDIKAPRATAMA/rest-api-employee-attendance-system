@@ -27,6 +27,9 @@ type UserRepository interface {
 	FindUserProfileByUserID(userID uuid.UUID) (*domain.UserProfile, error)
 	IsUserExist(userID uuid.UUID) (bool, error)
 	FindAllUsers(req dto.ListUsersRequest) ([]*domain.UserProfile, int64, error)
+
+	CountEmployeesPerDepartment() (map[string]int, error)
+	CountTodayRegistrations(today time.Time) (int, error)
 }
 
 type userRepository struct {
@@ -36,6 +39,35 @@ type userRepository struct {
 
 func NewUserRepository(db *gorm.DB, log *logrus.Logger) UserRepository {
 	return &userRepository{db: db, log: log}
+}
+
+func (r *userRepository) CountEmployeesPerDepartment() (map[string]int, error) {
+	var results []struct {
+		DeptName string
+		Count    int
+	}
+	err := r.db.Model(&domain.UserProfile{}).
+		Joins("LEFT JOIN departments ON departments.id = user_profiles.department_id").
+		Where("user_profiles.deleted_at IS NULL AND departments.deleted_at IS NULL").
+		Select("departments.department_name AS dept_name, COUNT(user_profiles.id) AS count").
+		Group("departments.department_name").Scan(&results).Error
+	if err != nil {
+		return nil, err
+	}
+
+	employeesPerDept := make(map[string]int)
+	for _, r := range results {
+		employeesPerDept[r.DeptName] = r.Count
+	}
+	return employeesPerDept, nil
+}
+
+func (r *userRepository) CountTodayRegistrations(today time.Time) (int, error) {
+	var count int64
+	err := r.db.Model(&domain.UserProfile{}).
+		Where("created_at >= ? AND created_at < ? AND deleted_at IS NULL", today, today.Add(24*time.Hour)).
+		Count(&count).Error
+	return int(count), err
 }
 
 func (r *userRepository) FindUserRoleByUserID(userID uuid.UUID) (domain.Role, error) {
@@ -155,8 +187,10 @@ func (r *userRepository) FindUserProfileByUserID(userID uuid.UUID) (*domain.User
 	err := r.db.
 		Model(&domain.UserProfile{}).
 		Preload("Department").
+		Preload("ApplicationRole").
 		Where("source_user_id = ?", userID).
 		First(&profile).Error
+
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, nil

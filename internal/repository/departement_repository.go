@@ -4,6 +4,7 @@ package repository
 import (
 	"employee-attendance-system/internal/entity/domain"
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
@@ -18,6 +19,8 @@ type DepartmentRepository interface {
 	FindAllDepartments(offset, limit int) ([]*domain.Department, int64, error)
 	IsDepartmentExist(departmentID uuid.UUID) (bool, error)
 	AssignmentDepartement(userID uuid.UUID, departmentID uuid.UUID) error
+
+	CountUpdatedDepartments(startDate, endDate time.Time) (int, error)
 }
 
 type departmentRepository struct {
@@ -87,4 +90,12 @@ func (r *departmentRepository) FindAllDepartments(offset, limit int) ([]*domain.
 	}
 	err := r.db.Offset(offset).Limit(limit).Find(&depts).Error
 	return depts, total, err
+}
+
+func (r *departmentRepository) CountUpdatedDepartments(startDate, endDate time.Time) (int, error) {
+	var count int64
+	err := r.db.Model(&domain.Department{}).
+		Where("updated_at >= ? AND updated_at <= ? AND deleted_at IS NULL", startDate, endDate).
+		Count(&count).Error
+	return int(count), err
 }
