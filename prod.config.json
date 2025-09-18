@@ -1,0 +1,35 @@
+{
+  "app": {
+    "name": "auth-service"
+  },
+  "web": {
+    "prefork": false,
+    "port": 3000
+  },
+  "log": {
+    "level": 6
+  },
+  "database": {
+    "username": "postgres",
+    "password": "jJJCVymQwBCzdBfvpIdqYaoZwzpbQxrb",
+    "host": "db",
+    "port": 5432,
+    "name": "db_employee_attendance_system",
+    "sslmode": "disable",
+    "timezone": "Asia/Jakarta",
+    "pool": {
+      "idle": 10,
+      "max": 100,
+      "lifetime": 300
+    }
+  },
+  "redis": {
+    "host": "localhost",
+    "port": 6379,
+    "password": ""
+  },
+  "jwt": {
+    "accesTokenSecret": "eyJhbGciOiJIUzI1NiJ9.ew0KICAic3ViIjogIjEyMzQ1Njc4OTAiLA0KICAibmFtZSI6ICJBbmlzaCBOYXRoIiwNCiAgImlhdCI6IDE1MTYyMzkwMjINCn0.3roLzv0ebJ-AKxsYeDWTAB9NmhYY9SRm_JRbrLe0T10",
+    "refreshTokenSecret": "3roLzv0ebJ-AKxsYeDWTAB9NmhYY9SRm_JRbrLe0T10"
+  }
+}
